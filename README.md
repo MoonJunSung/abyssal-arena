@@ -1,5 +1,50 @@
 # Abyssal Arena
 
+C++20으로 구현한 top-down action game prototype.
+
+## Development Goals
+- 게임 로직과 플랫폼 코드 분리
+- Fixed timestep 기반 deterministic simulation
+- 테스트 가능한 게임 시스템 설계
+- 성능 병목을 측정하고 개선하는 구조
+
+## Core Systems
+- Player movement
+- Attack / cooldown
+- Dash / invulnerability
+- Enemy chase AI
+- Enemy spawning
+- Collision separation
+- Score / game over
+- Event system
+
+## Architecture
+
+Win32 Platform
+      ↓
+   InputFrame
+      ↓
+   GameWorld
+      ↓
+   GameEvent
+
+## Testing
+
+- Movement normalization
+- Cooldown
+- Combat
+- Spawn determinism
+- Invalid input
+- Collision separation
+
+## Future Optimization
+
+Current enemy separation:
+O(n²)
+
+Planned:
+Uniform Grid Spatial Partitioning
+
 ## 조작법
 
 | 동작 | 키 |
