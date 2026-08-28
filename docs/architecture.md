@@ -20,6 +20,7 @@ WinMain / Win32 input / GDI rendering
 - `arena_core`는 Windows 헤더를 포함하지 않는 순수 C++20 라이브러리다.
 - `abyssal_arena`는 입력과 렌더링을 담당하고 핵심 로직에 `InputFrame`만 전달한다.
 - `arena_core_tests`는 창을 띄우지 않고 전투와 이동의 불변 조건을 검증한다.
+- `GameEvent`는 한 번의 고정 업데이트에서 발생한 결과를 플랫폼 계층에 전달한다. 앱은 다음 업데이트 전에 이를 소비하며, `AudioSystem`은 이벤트 우선순위에 따라 메모리에서 합성한 효과음을 재생한다.
 
 ## 주요 결정
 

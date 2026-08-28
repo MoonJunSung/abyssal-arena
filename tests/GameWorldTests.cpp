@@ -1,5 +1,6 @@
 #include "core/GameWorld.h"
 
+#include <algorithm>
 #include <cmath>
 #include <exception>
 #include <iostream>
@@ -28,6 +29,10 @@ arena::WorldConfig _testConfig() {
     config.automaticSpawning = false;
     config.enemyHealth = 80;
     return config;
+}
+
+bool _containsEvent(const arena::GameWorld& world, arena::GameEvent event) {
+    return std::ranges::find(world.events(), event) != world.events().end();
 }
 
 void _diagonalMovementIsNormalized() {
@@ -65,16 +70,21 @@ void _attackHasCooldownAndAwardsScore() {
     world.update({{}, true, false}, 0.01F);
     _require(world.enemies().size() == 1 && world.enemies().front().health == 35,
              "First attack should damage the nearby enemy once.");
+    _require(_containsEvent(world, arena::GameEvent::AttackStarted),
+             "A valid attack should publish an attack event.");
 
     world.update({{}, true, false}, 0.01F);
     _require(world.enemies().front().health == 35,
              "Attack cooldown should prevent immediate repeated damage.");
+    _require(world.events().empty(), "A blocked attack should not publish an event.");
 
     world.update({}, 0.25F);
     world.update({}, 0.10F);
     world.update({{}, true, false}, 0.01F);
     _require(world.enemies().empty(), "Second valid attack should defeat the enemy.");
     _require(world.score() == 100, "Defeating one enemy should award 100 points.");
+    _require(_containsEvent(world, arena::GameEvent::EnemyDefeated),
+             "Defeating an enemy should publish a defeat event.");
 }
 
 void _dashMovesAndStartsCooldown() {
@@ -88,6 +98,49 @@ void _dashMovesAndStartsCooldown() {
              "Dash should start its cooldown.");
     _require(world.player().invulnerability > 0.0F,
              "Dash should briefly protect the player.");
+    _require(_containsEvent(world, arena::GameEvent::DashStarted),
+             "A valid dash should publish a dash event.");
+}
+
+void _multiKillPublishesOneAggregatedDefeatEvent() {
+    arena::WorldConfig config = _testConfig();
+    config.enemyHealth = 40;
+    arena::GameWorld world(config);
+    world.spawnEnemy({225.0F, 150.0F});
+    world.spawnEnemy({175.0F, 150.0F});
+
+    world.update({{}, true, false}, 0.01F);
+    _require(world.enemies().empty() && world.score() == 200,
+             "One attack should be able to defeat multiple nearby enemies.");
+    _require(std::ranges::count(world.events(), arena::GameEvent::EnemyDefeated) == 1,
+             "A multi-kill should publish one aggregated defeat sound event per update.");
+}
+
+void _contactDamagePublishesDamageAndGameOverEvents() {
+    arena::GameWorld world(_testConfig());
+    world.spawnEnemy(world.player().position);
+
+    bool sawDamage = false;
+    bool sawGameOver = false;
+    for (int step = 0; step < 40 && !world.gameOver(); ++step) {
+        world.update({}, 0.25F);
+        sawDamage = sawDamage || _containsEvent(world, arena::GameEvent::PlayerDamaged);
+        sawGameOver = sawGameOver || _containsEvent(world, arena::GameEvent::GameOver);
+    }
+
+    _require(sawDamage, "Enemy contact should publish a player-damaged event.");
+    _require(world.gameOver() && sawGameOver,
+             "Lethal contact should publish a game-over event.");
+    _require(world.events().size() == 2 &&
+                 world.events()[0] == arena::GameEvent::PlayerDamaged &&
+                 world.events()[1] == arena::GameEvent::GameOver,
+             "Lethal contact events must be emitted once and in causal order.");
+
+    world.update({}, 0.01F);
+    _require(world.events().empty(),
+             "A post-game update must clear terminal events without repeating them.");
+    world.reset();
+    _require(world.events().empty(), "Reset must not retain events from the previous run.");
 }
 
 void _invalidDeltaTimeIsReported() {
@@ -177,6 +230,8 @@ int main() {
         _playerCannotLeaveArena();
         _attackHasCooldownAndAwardsScore();
         _dashMovesAndStartsCooldown();
+        _multiKillPublishesOneAggregatedDefeatEvent();
+        _contactDamagePublishesDamageAndGameOverEvents();
         _invalidDeltaTimeIsReported();
         _invalidWorldAndSpawnInputsAreReported();
         _spawnTimingDoesNotDependOnFramePartitioning();

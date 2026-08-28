@@ -22,6 +22,15 @@ struct InputFrame {
     bool dashPressed{};
 };
 
+enum class GameEvent : std::uint8_t {
+    AttackStarted,
+    DashStarted,
+    // Aggregated per update: emitted once when one or more enemies are defeated.
+    EnemyDefeated,
+    PlayerDamaged,
+    GameOver,
+};
+
 struct PlayerState {
     Vec2 position{};
     float radius{18.0F};
@@ -64,6 +73,8 @@ public:
     [[nodiscard]] const WorldConfig& config() const noexcept;
     [[nodiscard]] const PlayerState& player() const noexcept;
     [[nodiscard]] const std::vector<EnemyState>& enemies() const noexcept;
+    // Events produced by the latest update. Consume before calling update again.
+    [[nodiscard]] const std::vector<GameEvent>& events() const noexcept;
     [[nodiscard]] int score() const noexcept;
     [[nodiscard]] float elapsedSeconds() const noexcept;
     [[nodiscard]] float attackEffectRemaining() const noexcept;
@@ -86,6 +97,7 @@ private:
     std::uint32_t nextEnemyId_{1};
     PlayerState player_;
     std::vector<EnemyState> enemies_;
+    std::vector<GameEvent> events_;
     int score_{};
     float elapsedSeconds_{};
     float spawnTimer_{};

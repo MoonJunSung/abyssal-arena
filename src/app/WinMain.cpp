@@ -1,3 +1,4 @@
+#include "app/AudioSystem.h"
 #include "core/GameWorld.h"
 
 #include <windows.h>
@@ -19,6 +20,7 @@ constexpr float kFixedStepSeconds = 1.0F / 60.0F;
 
 struct AppState {
     arena::GameWorld world;
+    arena::app::AudioSystem audio;
     bool active{true};
     bool previousAttackDown{};
     bool previousDashDown{};
@@ -283,6 +285,7 @@ int _run(HINSTANCE instance, int showCommand) {
                 input.dashPressed = false;
             }
             app.world.update(input, kFixedStepSeconds);
+            app.audio.playEvents(app.world.events());
             advancedSimulation = true;
             accumulator -= kFixedStepSeconds;
         }

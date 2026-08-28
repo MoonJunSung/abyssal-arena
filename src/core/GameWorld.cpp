@@ -80,6 +80,8 @@ void GameWorld::reset() {
     spawnTimer_ = config_.spawnInterval;
     attackEffectRemaining_ = 0.0F;
     enemies_.clear();
+    events_.clear();
+    events_.reserve(4);
 
     player_ = {};
     player_.position = {config_.width * 0.5F, config_.height * 0.5F};
@@ -95,11 +97,12 @@ void GameWorld::update(const InputFrame& input, float deltaSeconds) {
     if (!(deltaSeconds > 0.0F && deltaSeconds <= kMaximumDeltaSeconds)) {
         throw std::invalid_argument("Delta time must be in the range (0, 0.25].");
     }
-    if (gameOver()) {
-        return;
-    }
     if (!(std::isfinite(input.movement.x) && std::isfinite(input.movement.y))) {
         throw std::invalid_argument("Input movement must contain finite coordinates.");
+    }
+    events_.clear();
+    if (gameOver()) {
+        return;
     }
 
     elapsedSeconds_ += deltaSeconds;
@@ -118,6 +121,9 @@ void GameWorld::update(const InputFrame& input, float deltaSeconds) {
     _updateEnemies(deltaSeconds);
     _resolveEnemySeparation();
     _resolveContactDamage();
+    if (gameOver()) {
+        return;
+    }
     _updateSpawning(deltaSeconds);
 }
 
@@ -144,6 +150,10 @@ const PlayerState& GameWorld::player() const noexcept {
 
 const std::vector<EnemyState>& GameWorld::enemies() const noexcept {
     return enemies_;
+}
+
+const std::vector<GameEvent>& GameWorld::events() const noexcept {
+    return events_;
 }
 
 int GameWorld::score() const noexcept {
@@ -192,6 +202,7 @@ void GameWorld::_updatePlayer(const InputFrame& input, float deltaSeconds) {
         player_.position = player_.position + direction * kDashDistance;
         player_.dashCooldown = kDashCooldown;
         player_.invulnerability = kDashInvulnerability;
+        events_.push_back(GameEvent::DashStarted);
     }
 
     _clampToArena(player_.position, player_.radius);
@@ -262,6 +273,10 @@ void GameWorld::_resolveContactDamage() {
             player_.health = std::max(0, player_.health - kContactDamage);
             player_.invulnerability = 0.16F;
             enemy.contactCooldown = kContactCooldown;
+            events_.push_back(GameEvent::PlayerDamaged);
+            if (gameOver()) {
+                events_.push_back(GameEvent::GameOver);
+            }
             break;
         }
     }
@@ -270,6 +285,7 @@ void GameWorld::_resolveContactDamage() {
 void GameWorld::_performAttack() {
     player_.attackCooldown = kPlayerAttackCooldown;
     attackEffectRemaining_ = kAttackEffectDuration;
+    events_.push_back(GameEvent::AttackStarted);
 
     for (EnemyState& enemy : enemies_) {
         const float hitDistance = kPlayerAttackRadius + enemy.radius;
@@ -282,6 +298,9 @@ void GameWorld::_performAttack() {
     std::erase_if(enemies_, [](const EnemyState& enemy) { return enemy.health <= 0; });
     const std::size_t defeatedCount = previousCount - enemies_.size();
     score_ += static_cast<int>(defeatedCount) * 100;
+    if (defeatedCount > 0) {
+        events_.push_back(GameEvent::EnemyDefeated);
+    }
 }
 
 void GameWorld::_updateSpawning(float deltaSeconds) {

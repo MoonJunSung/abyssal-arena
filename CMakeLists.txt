@@ -20,10 +20,11 @@ endif()
 
 if(WIN32)
     add_executable(abyssal_arena WIN32
+        src/app/AudioSystem.cpp
         src/app/WinMain.cpp
     )
     target_compile_definitions(abyssal_arena PRIVATE NOMINMAX UNICODE _UNICODE)
-    target_link_libraries(abyssal_arena PRIVATE arena_core user32 gdi32)
+    target_link_libraries(abyssal_arena PRIVATE arena_core user32 gdi32 winmm)
 
     if(MSVC)
         target_compile_options(abyssal_arena PRIVATE /W4 /permissive-)
