@@ -2,6 +2,12 @@
 
 C++20으로 구현한 top-down action game prototype.
 
+## Preview
+
+게임 실행 화면
+<img width="1268" height="707" alt="image" src="https://github.com/user-attachments/assets/b8aa5b16-e9ef-496e-b508-06c5909948fa" />
+<img width="1280" height="718" alt="image" src="https://github.com/user-attachments/assets/88586eae-a974-4f82-b21b-8854272d7503" />
+
 ## Development Goals
 - 게임 로직과 플랫폼 코드 분리
 - Fixed timestep 기반 deterministic simulation
